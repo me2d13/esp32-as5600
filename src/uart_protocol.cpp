@@ -27,10 +27,16 @@ void UartProtocol::transmit(uint16_t angle1, uint16_t angle2) {
   _serial.write((uint8_t*)&_packet, sizeof(_packet));
 
   #if DEBUG_ENABLED
+    // Only print debug output once per second to avoid flooding
+    static unsigned long lastDebugPrint = 0;
+    unsigned long currentTime = millis();
+    if (currentTime - lastDebugPrint >= 1000) {
+      lastDebugPrint = currentTime;
     Serial.printf("TX: Angle1=%4d (%.2f°), Angle2=%4d (%.2f°), Checksum=0x%02X\n",
                   angle1, angle1 * 360.0 / 4096.0,
                   angle2, angle2 * 360.0 / 4096.0,
                   _packet.checksum);
+    }
   #endif
 }
 

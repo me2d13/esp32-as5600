@@ -24,10 +24,14 @@ void setup() {
   // Initialize USB Serial for debugging (if enabled)
   #if DEBUG_ENABLED
     Serial.begin(115200);
-    delay(1000);
+    delay(3000);  // Give USB CDC time to enumerate
+    while (!Serial && millis() < 5000) {
+      delay(10);  // Wait for Serial connection, timeout after 5 seconds
+    }
     Serial.println("\n\n=================================");
     Serial.println("ESP32-S3 Dual AS5600 Reader");
     Serial.println("=================================");
+    Serial.println("DEBUG: Serial initialized");
   #endif
 
   // Initialize RGB LED

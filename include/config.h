@@ -2,21 +2,23 @@
 #define CONFIG_H
 
 // ============================================================================
-// ESP32-S3 Dual AS5600 Magnetic Encoder Reader - Configuration
+// ESP32-S3-Zero Dual AS5600 Magnetic Encoder Reader - Configuration
 // ============================================================================
+// Board: Waveshare ESP32-S3-Zero
+// Note: GPIO33-GPIO37 are NOT available (used for Octal PSRAM)
 
 // ----------------------------------------------------------------------------
 // I2C Bus 0 Configuration (First AS5600 Sensor)
 // ----------------------------------------------------------------------------
-#define I2C_BUS0_SDA_PIN    8       // GPIO 8 - I2C Bus 0 SDA
-#define I2C_BUS0_SCL_PIN    9       // GPIO 9 - I2C Bus 0 SCL
+#define I2C_BUS0_SDA_PIN    5       // GPIO 5 - I2C Bus 0 SDA
+#define I2C_BUS0_SCL_PIN    6       // GPIO 6 - I2C Bus 0 SCL
 #define I2C_BUS0_FREQ       400000  // 400kHz (Fast Mode)
 
 // ----------------------------------------------------------------------------
 // I2C Bus 1 Configuration (Second AS5600 Sensor)
 // ----------------------------------------------------------------------------
-#define I2C_BUS1_SDA_PIN    10      // GPIO 10 - I2C Bus 1 SDA
-#define I2C_BUS1_SCL_PIN    11      // GPIO 11 - I2C Bus 1 SCL
+#define I2C_BUS1_SDA_PIN    7       // GPIO 7 - I2C Bus 1 SDA
+#define I2C_BUS1_SCL_PIN    8       // GPIO 8 - I2C Bus 1 SCL
 #define I2C_BUS1_FREQ       400000  // 400kHz (Fast Mode)
 
 // ----------------------------------------------------------------------------
@@ -31,7 +33,7 @@
 // ----------------------------------------------------------------------------
 // RGB LED Configuration (for status indication)
 // ----------------------------------------------------------------------------
-#define RGB_LED_PIN         48      // GPIO 48 - Onboard RGB LED
+#define RGB_LED_PIN         21      // GPIO 21 - Onboard WS2812 RGB LED
 #define RGB_LED_BRIGHTNESS  50      // Brightness (0-255)
 
 // ----------------------------------------------------------------------------
@@ -64,6 +66,6 @@
 // ----------------------------------------------------------------------------
 // Set to true to enable debug output on Serial (USB programming port)
 // WARNING: This will slow down the system and affect timing
-#define DEBUG_ENABLED       false
+#define DEBUG_ENABLED       true
 
 #endif // CONFIG_H

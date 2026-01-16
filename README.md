@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This project uses an **ESP32-S3-WROOM1 N16R8** module to read angular position data from **two AS5600 magnetic rotary encoders** simultaneously and transmit the data via UART to another ESP32 module for further processing.
+This project uses an **ESP32-S3-Zero** (Waveshare) module to read angular position data from **two AS5600 magnetic rotary encoders** simultaneously and transmit the data via UART to another ESP32 module for further processing.
 
 ### Why Two I2C Buses?
 
@@ -10,9 +10,12 @@ The AS5600 magnetic encoder has a **fixed I2C address (0x36)** that cannot be ch
 
 ## Hardware Components
 
-- **ESP32-S3-WROOM1 N16R8** (44-pin, Type-C, 16MB Flash, 8MB PSRAM)
-  - Onboard RGB LED (WS2812) for status indication
-  - Dual USB ports: one for programming (COM7), one for UART communication
+- **ESP32-S3-Zero** (Waveshare)
+  - ESP32-S3FH4R2 chip (4MB Flash, 2MB PSRAM)
+  - Onboard WS2812 RGB LED on GPIO21 for status indication
+  - USB Type-C for programming and power (COM9)
+  - Compact form factor with castellated holes
+  - **Note**: GPIO33-37 are reserved for PSRAM and not available
 - **2x AS5600 Magnetic Rotary Position Sensors**
   - 12-bit resolution (0-4095 counts = 0-360°)
   - I2C interface with fixed address 0x36
@@ -22,22 +25,24 @@ The AS5600 magnetic encoder has a **fixed I2C address (0x36)** that cannot be ch
 
 ### I2C Buses
 - **I2C Bus 0** (First AS5600):
-  - SDA: GPIO 8
-  - SCL: GPIO 9
+  - SDA: GPIO 1
+  - SCL: GPIO 2
   
 - **I2C Bus 1** (Second AS5600):
-  - SDA: GPIO 10
-  - SCL: GPIO 11
+  - SDA: GPIO 3
+  - SCL: GPIO 4
 
 ### UART Serial Communication
-- **TX**: GPIO 43 (U0TXD)
-- **RX**: GPIO 44 (U0RXD)
+- **TX**: GPIO 43 (U0TXD - default UART0 TX)
+- **RX**: GPIO 44 (U0RXD - default UART0 RX)
 - **Baud Rate**: 115200
 
 ### Status LED
-- **RGB LED**: GPIO 48 (onboard WS2812)
+- **RGB LED**: GPIO 21 (onboard WS2812)
 
 > **Note**: All pin assignments can be modified in `include/config.h`
+> 
+> **Important**: GPIO33-37 are NOT available on ESP32-S3-Zero (used for PSRAM). Alternative I2C pins: GPIO5-18, GPIO38-42.
 
 ## Features
 
@@ -98,16 +103,19 @@ All configuration is centralized in `include/config.h`:
 // Sampling frequency
 #define SAMPLE_RATE_HZ      50      // 10-100 Hz recommended
 
-// I2C pins and frequency
-#define I2C_BUS0_SDA_PIN    8
-#define I2C_BUS0_SCL_PIN    9
-#define I2C_BUS1_SDA_PIN    10
-#define I2C_BUS1_SCL_PIN    11
+// I2C pins and frequency (ESP32-S3-Zero)
+#define I2C_BUS0_SDA_PIN    1
+#define I2C_BUS0_SCL_PIN    2
+#define I2C_BUS1_SDA_PIN    3
+#define I2C_BUS1_SCL_PIN    4
 
 // Serial communication
 #define SERIAL_TX_PIN       43
 #define SERIAL_RX_PIN       44
 #define SERIAL_BAUD_RATE    115200
+
+// RGB LED (WS2812 on GPIO21)
+#define RGB_LED_PIN         21
 
 // Debug mode
 #define DEBUG_ENABLED       false   // Set to true for USB debug output
@@ -117,7 +125,8 @@ All configuration is centralized in `include/config.h`:
 
 ### Prerequisites
 - [PlatformIO](https://platformio.org/) installed
-- ESP32-S3 connected via USB (programming port) to COM7
+- ESP32-S3-Zero connected via USB Type-C to COM9
+- **Important**: Press and hold BOOT button (GPIO0) before connecting USB to enter programming mode
 
 ### Build
 ```bash
@@ -134,17 +143,8 @@ pio run --target upload
 pio device monitor
 ```
 
-## Project Structure
 
-```
-esp32-as5600/
-├── include/
-│   └── config.h              # Configuration file (pin assignments, sample rate)
-├── src/
-│   └── main.cpp              # Main application code
-├── platformio.ini            # PlatformIO configuration
-└── README.md                 # This file
-```
+> **Note**: For detailed code architecture and project structure, see [ARCHITECTURE.md](ARCHITECTURE.md)
 
 ## Dependencies
 
@@ -197,6 +197,22 @@ Potential improvements for this project:
 - [ ] Support for more than 2 sensors using I2C multiplexer
 - [ ] Add configuration via web interface
 - [ ] Store calibration data in non-volatile memory
+
+## References
+
+### ESP32-S3-Zero Documentation
+- [ESP32-S3-Zero Wiki](https://www.waveshare.com/wiki/ESP32-S3-Zero) - Official Waveshare documentation
+- [WS2812 RGB LED Datasheet](https://files.waveshare.com/wiki/ESP32-S3-Zero/XL-0807RGBC-WS2812B.pdf) - Onboard LED specifications
+- [ESP32-S3 Technical Reference Manual](https://www.espressif.com/sites/default/files/documentation/esp32-s3_technical_reference_manual_en.pdf) - Complete chip documentation
+- [ESP32-S3 Datasheet](https://www.espressif.com/sites/default/files/documentation/esp32-s3_datasheet_en.pdf) - Hardware specifications
+
+### AS5600 Sensor Documentation
+- [AS5600 Datasheet](https://ams.com/documents/20143/36005/AS5600_DS000365_5-00.pdf) - Magnetic encoder specifications
+- [AS5600 Arduino Library](https://github.com/RobTillaart/AS5600) - RobTillaart's library documentation
+
+### PlatformIO & Development
+- [PlatformIO ESP32 Platform](https://docs.platformio.org/en/latest/platforms/espressif32.html) - Platform documentation
+- [Arduino-ESP32 Documentation](https://docs.espressif.com/projects/arduino-esp32/en/latest/) - Arduino framework for ESP32
 
 ## License
 
