@@ -3,6 +3,7 @@
 #include "rgb_led.h"
 #include "sensor_manager.h"
 #include "uart_protocol.h"
+#include "web_server.h"
 
 // ============================================================================
 // Global Objects
@@ -11,6 +12,7 @@
 RgbLed led(RGB_LED_PIN, RGB_LED_BRIGHTNESS);
 SensorManager sensors;
 UartProtocol uart(Serial1);
+WebServerManager webServer;
 
 // ============================================================================
 // Global Variables
@@ -54,6 +56,9 @@ void setup() {
     led.setStatus(RgbLed::ERROR);
   }
 
+  // Initialize WiFi and web server (only if configured)
+  webServer.begin(WIFI_SSID, WIFI_PASSWORD, WEB_SERVER_PORT);
+
   #if DEBUG_ENABLED
     Serial.printf("Sample rate: %d Hz (%d ms interval)\n", 
                   SAMPLE_RATE_HZ, SAMPLE_INTERVAL_MS);
@@ -79,6 +84,17 @@ void loop() {
     
     // Transmit data via UART
     uart.transmit(angle1, angle2);
+    
+    // Update web server with new sensor data
+    if (webServer.isEnabled()) {
+      webServer.updateSensorData(angle1, angle2);
+    }
+  }
+
+  // Handle web server clients and broadcast WebSocket data
+  if (webServer.isEnabled()) {
+    webServer.handleClient();
+    webServer.broadcastSensorData();
   }
 
   // Small delay to prevent watchdog issues

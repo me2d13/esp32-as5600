@@ -67,7 +67,14 @@ The AS5600 magnetic encoder has a **fixed I2C address (0x36)** that cannot be ch
 - **Blue**: Only one sensor connected
 - **Red**: No sensors detected or error
 
-### 5. Debug Mode
+### 5. WiFi Web Server with Real-Time Monitoring
+- **Optional WiFi connectivity** - Enable by setting SSID in `config.h`
+- **Web-based dashboard** - Beautiful, responsive interface for monitoring sensors
+- **WebSocket updates** - Real-time sensor data streaming (configurable update rate)
+- **Auto-reconnect** - Automatic reconnection if WiFi connection is lost
+- **Conditional compilation** - WiFi disabled if SSID is empty (no overhead)
+
+### 6. Debug Mode
 - Optional debug output via USB Serial (programming port)
 - Can be enabled/disabled in `config.h` without code changes
 
@@ -119,7 +126,60 @@ All configuration is centralized in `include/config.h`:
 
 // Debug mode
 #define DEBUG_ENABLED       false   // Set to true for USB debug output
+
+// WiFi configuration (optional)
+#define WIFI_SSID           ""      // Your WiFi SSID (leave empty to disable WiFi)
+#define WIFI_PASSWORD       ""      // Your WiFi password
+#define WEB_SERVER_PORT     80      // Web server port
+#define WEBSOCKET_UPDATE_MS 100     // WebSocket update interval (milliseconds)
 ```
+
+### WiFi Web Interface
+
+To enable the web interface:
+
+1. **Configure WiFi credentials** using one of these methods:
+
+   **Method 1: Using secrets.h (Recommended for git repos)**
+   ```bash
+   # Copy the template
+   cp include/secrets.h.template include/secrets.h
+   
+   # Edit include/secrets.h with your credentials
+   # This file is gitignored and won't be committed
+   ```
+   
+   **Method 2: Direct configuration**
+   ```cpp
+   // Edit include/config.h (not recommended for public repos)
+   #define WIFI_SSID           "YourWiFiNetwork"
+   #define WIFI_PASSWORD       "YourPassword"
+   ```
+
+2. **Build and upload** the firmware
+
+3. **Check the serial monitor** for the assigned IP address:
+   ```
+   === WiFi Configuration ===
+   SSID: YourWiFiNetwork
+   Connecting to WiFi.....
+   WiFi connected!
+   IP Address: 192.168.1.100
+   Web server started on port 80
+   WebSocket server started on port 81
+   ```
+
+4. **Open your browser** and navigate to the IP address (e.g., `http://192.168.1.100`)
+
+The web interface displays:
+- Real-time angle values in degrees (0-360°)
+- Raw sensor values (0-4095)
+- Visual progress bars for each sensor
+- Connection status indicator
+- Automatic reconnection on disconnect
+
+**Note**: If `WIFI_SSID` is left empty, WiFi functionality is completely disabled and the code runs without any WiFi overhead.
+
 
 ## Building and Uploading
 
@@ -152,6 +212,8 @@ The following libraries are automatically installed by PlatformIO:
 
 - **Adafruit NeoPixel** (^1.12.0) - RGB LED control
 - **AS5600** by RobTillaart (^0.6.1) - AS5600 sensor interface
+- **ArduinoJson** (^6.21.3) - JSON serialization for WebSocket data
+- **WebSockets** by Links2004 (^2.4.1) - WebSocket server for real-time updates
 
 ## Usage Workflow
 

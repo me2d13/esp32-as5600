@@ -1,1 +1,16 @@
-.pio
+# PlatformIO
+.pio/
+.vscode/
+
+# WiFi credentials (keep your secrets safe!)
+include/secrets.h
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+*.swp
+*.swo
+*~
+.idea/
