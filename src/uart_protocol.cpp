@@ -1,5 +1,6 @@
 #include "uart_protocol.h"
 #include "config.h"
+#include "logger.h"
 
 // ============================================================================
 // Constructor
@@ -12,11 +13,7 @@ UartProtocol::UartProtocol(HardwareSerial& serial) : _serial(serial) {
 // ============================================================================
 void UartProtocol::begin(uint32_t baudRate, uint8_t txPin, uint8_t rxPin) {
   _serial.begin(baudRate, SERIAL_8N1, rxPin, txPin);
-  
-  #if DEBUG_ENABLED
-    Serial.printf("UART initialized: TX=%d, RX=%d, Baud=%d\n", 
-                  txPin, rxPin, baudRate);
-  #endif
+  LOG_INFOF("UART initialized: TX=%d, RX=%d, Baud=%d", txPin, rxPin, baudRate);
 }
 
 // ============================================================================
@@ -26,18 +23,16 @@ void UartProtocol::transmit(uint16_t angle1, uint16_t angle2) {
   buildPacket(angle1, angle2);
   _serial.write((uint8_t*)&_packet, sizeof(_packet));
 
-  #if DEBUG_ENABLED
-    // Only print debug output once per second to avoid flooding
-    static unsigned long lastDebugPrint = 0;
-    unsigned long currentTime = millis();
-    if (currentTime - lastDebugPrint >= 1000) {
-      lastDebugPrint = currentTime;
-    Serial.printf("TX: Angle1=%4d (%.2f°), Angle2=%4d (%.2f°), Checksum=0x%02X\n",
-                  angle1, angle1 * 360.0 / 4096.0,
-                  angle2, angle2 * 360.0 / 4096.0,
-                  _packet.checksum);
-    }
-  #endif
+  // Only print debug output once per 10 seconds to avoid flooding log
+  static unsigned long lastDebugPrint = 0;
+  unsigned long currentTime = millis();
+  if (currentTime - lastDebugPrint >= 10000) {
+    lastDebugPrint = currentTime;
+    LOG_DEBUGF("TX: Angle1=%4d (%.2f°), Angle2=%4d (%.2f°), Checksum=0x%02X",
+              angle1, angle1 * 360.0 / 4096.0,
+              angle2, angle2 * 360.0 / 4096.0,
+              _packet.checksum);
+  }
 }
 
 // ============================================================================

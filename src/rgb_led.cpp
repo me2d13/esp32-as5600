@@ -4,7 +4,7 @@
 // Constructor
 // ============================================================================
 RgbLed::RgbLed(uint8_t pin, uint8_t brightness)
-  : _rgb(1, pin, NEO_GRB + NEO_KHZ800), _brightness(brightness) {
+  : _rgb(1, pin, NEO_RGB + NEO_KHZ800), _brightness(brightness) {
 }
 
 // ============================================================================

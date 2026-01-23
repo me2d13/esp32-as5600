@@ -74,7 +74,14 @@ The AS5600 magnetic encoder has a **fixed I2C address (0x36)** that cannot be ch
 - **Auto-reconnect** - Automatic reconnection if WiFi connection is lost
 - **Conditional compilation** - WiFi disabled if SSID is empty (no overhead)
 
-### 6. Debug Mode
+### 6. OTA (Over-The-Air) Updates
+- **Wireless firmware updates** - Upload new firmware without USB cable
+- **Password protected** - Secure OTA updates with authentication
+- **Visual feedback** - RGB LED indicates update progress and status
+- **Automatic activation** - OTA enabled automatically when WiFi is connected
+- **Easy switching** - Use `pio run -e ota --target upload` for wireless updates
+
+### 7. Debug Mode
 - Optional debug output via USB Serial (programming port)
 - Can be enabled/disabled in `config.h` without code changes
 
@@ -178,8 +185,6 @@ The web interface displays:
 - Connection status indicator
 - Automatic reconnection on disconnect
 
-**Note**: If `WIFI_SSID` is left empty, WiFi functionality is completely disabled and the code runs without any WiFi overhead.
-
 
 ## Building and Uploading
 
@@ -188,20 +193,67 @@ The web interface displays:
 - ESP32-S3-Zero connected via USB Type-C to COM9
 - **Important**: Press and hold BOOT button (GPIO0) before connecting USB to enter programming mode
 
-### Build
+### Environments
+
+This project has two PlatformIO environments:
+
+- **`com`** - Serial upload via USB (COM9)
+- **`ota`** - Wireless upload via WiFi (OTA - Over The Air)
+
+### Initial Upload (via USB)
+
+For the first upload, you must use the USB connection:
+
 ```bash
-pio run
+# Build the project
+pio run -e com
+
+# Upload via USB
+pio run -e com --target upload
 ```
 
-### Upload
+### OTA Upload (Wireless)
+
+Once WiFi is configured and the device is connected to your network, you can upload wirelessly:
+
 ```bash
-pio run --target upload
+# Upload via OTA
+pio run -e ota --target upload
 ```
+
+**OTA Configuration:**
+- **Hostname**: `esp32-as5600`
+- **Password**: `esp32-as5600`
+- **IP Address**: Configure in `platformio.ini` under `[env:ota]` → `upload_port`
+
+**Note**: OTA is only available when WiFi is enabled and connected. The device must be on the same network as your computer.
+
+### OTA LED Status Indicators
+
+During OTA updates, the RGB LED provides visual feedback:
+- **Purple (blinking)**: OTA update in progress
+- **White**: OTA update completed successfully
+- **Red**: OTA update failed (check password and network connection)
+
+After a successful OTA update, the device will automatically reboot and resume normal operation.
 
 ### Monitor (UART data port, not programming port)
 ```bash
 pio device monitor
 ```
+
+### Troubleshooting OTA
+
+**OTA not working:**
+- Ensure WiFi credentials are configured in `config.h` or `secrets.h`
+- Verify the device is connected to WiFi (check serial monitor for IP address)
+- Confirm the IP address in `platformio.ini` matches the device's IP
+- Check that the OTA password matches (`esp32-as5600` by default)
+- Ensure your computer and ESP32 are on the same network
+- Try pinging the device: `ping 192.168.1.29`
+
+**Upload fails with authentication error:**
+- The password in `platformio.ini` (`--auth=esp32-as5600`) must match the password in `main.cpp`
 
 
 > **Note**: For detailed code architecture and project structure, see [ARCHITECTURE.md](ARCHITECTURE.md)
@@ -255,10 +307,12 @@ Potential improvements for this project:
 
 - [ ] Add CRC16 checksum for better error detection
 - [ ] Implement velocity calculation (RPM)
-- [ ] Add WiFi/Bluetooth data transmission option
+- [x] ~~Add WiFi/Bluetooth data transmission option~~ (WiFi implemented)
+- [x] ~~Add OTA update support~~ (OTA implemented)
 - [ ] Support for more than 2 sensors using I2C multiplexer
 - [ ] Add configuration via web interface
 - [ ] Store calibration data in non-volatile memory
+- [ ] Add mDNS support for easier device discovery (esp32-as5600.local)
 
 ## References
 

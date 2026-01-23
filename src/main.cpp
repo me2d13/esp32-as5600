@@ -1,9 +1,11 @@
 #include <Arduino.h>
 #include "config.h"
+#include "logger.h"
 #include "rgb_led.h"
 #include "sensor_manager.h"
 #include "uart_protocol.h"
 #include "web_server.h"
+#include "ota_update.h"
 
 // ============================================================================
 // Global Objects
@@ -13,6 +15,7 @@ RgbLed led(RGB_LED_PIN, RGB_LED_BRIGHTNESS);
 SensorManager sensors;
 UartProtocol uart(Serial1);
 WebServerManager webServer;
+OTAUpdate ota;
 
 // ============================================================================
 // Global Variables
@@ -30,11 +33,15 @@ void setup() {
     while (!Serial && millis() < 5000) {
       delay(10);  // Wait for Serial connection, timeout after 5 seconds
     }
-    Serial.println("\n\n=================================");
-    Serial.println("ESP32-S3 Dual AS5600 Reader");
-    Serial.println("=================================");
-    Serial.println("DEBUG: Serial initialized");
   #endif
+
+  // Initialize logger
+  logger.begin(LOG_BUFFER_SIZE);
+  
+  LOG_INFO("=================================");
+  LOG_INFO("ESP32-S3 Dual AS5600 Reader");
+  LOG_INFO("=================================");
+  LOG_INFO("System initialized");
 
   // Initialize RGB LED
   led.begin();
@@ -47,7 +54,13 @@ void setup() {
   sensors.begin(I2C_BUS0_SDA_PIN, I2C_BUS0_SCL_PIN, I2C_BUS0_FREQ,
                 I2C_BUS1_SDA_PIN, I2C_BUS1_SCL_PIN, I2C_BUS1_FREQ);
 
-  // Set status LED based on sensor connection
+  // Initialize WiFi and web server (only if configured)
+  webServer.begin(WIFI_SSID, WIFI_PASSWORD, WEB_SERVER_PORT);
+
+  // Initialize OTA updates (only if WiFi is connected)
+  ota.begin("esp32-as5600", "esp32-as5600");
+
+  // Set status LED based on sensor connection (after WiFi/OTA to avoid being overwritten)
   if (sensors.areBothConnected()) {
     led.setStatus(RgbLed::OK);
   } else if (sensors.isAnyConnected()) {
@@ -56,14 +69,8 @@ void setup() {
     led.setStatus(RgbLed::ERROR);
   }
 
-  // Initialize WiFi and web server (only if configured)
-  webServer.begin(WIFI_SSID, WIFI_PASSWORD, WEB_SERVER_PORT);
-
-  #if DEBUG_ENABLED
-    Serial.printf("Sample rate: %d Hz (%d ms interval)\n", 
-                  SAMPLE_RATE_HZ, SAMPLE_INTERVAL_MS);
-    Serial.println("Starting main loop...\n");
-  #endif
+  LOG_INFOF("Sample rate: %d Hz (%d ms interval)", SAMPLE_RATE_HZ, SAMPLE_INTERVAL_MS);
+  LOG_INFO("Starting main loop...");
 
   lastSampleTime = millis();
 }
@@ -96,6 +103,9 @@ void loop() {
     webServer.handleClient();
     webServer.broadcastSensorData();
   }
+
+  // Handle OTA updates
+  ota.handle();
 
   // Small delay to prevent watchdog issues
   delay(1);

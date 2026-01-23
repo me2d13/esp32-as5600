@@ -89,6 +89,13 @@
 #define WEBSOCKET_UPDATE_MS 100         // WebSocket update interval in milliseconds
 
 // ----------------------------------------------------------------------------
+// Logging Configuration
+// ----------------------------------------------------------------------------
+// Number of log messages to keep in memory for web interface display
+// DEBUG level logs are not stored, only INFO, WARN, and ERROR
+#define LOG_BUFFER_SIZE     20
+
+// ----------------------------------------------------------------------------
 // Debug Configuration
 // ----------------------------------------------------------------------------
 // Set to true to enable debug output on Serial (USB programming port)

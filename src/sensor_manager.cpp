@@ -1,5 +1,6 @@
 #include "sensor_manager.h"
 #include "config.h"
+#include "logger.h"
 
 // ============================================================================
 // Constructor
@@ -16,17 +17,11 @@ void SensorManager::begin(uint8_t sda0, uint8_t scl0, uint32_t freq0,
                           uint8_t sda1, uint8_t scl1, uint32_t freq1) {
   // Initialize I2C Bus 0
   Wire.begin(sda0, scl0, freq0);
-  
-  #if DEBUG_ENABLED
-    Serial.printf("I2C Bus 0: SDA=%d, SCL=%d, Freq=%d Hz\n", sda0, scl0, freq0);
-  #endif
+  LOG_INFOF("I2C Bus 0: SDA=%d, SCL=%d, Freq=%d Hz", sda0, scl0, freq0);
 
   // Initialize I2C Bus 1
   Wire1.begin(sda1, scl1, freq1);
-  
-  #if DEBUG_ENABLED
-    Serial.printf("I2C Bus 1: SDA=%d, SCL=%d, Freq=%d Hz\n", sda1, scl1, freq1);
-  #endif
+  LOG_INFOF("I2C Bus 1: SDA=%d, SCL=%d, Freq=%d Hz", sda1, scl1, freq1);
 
   // Initialize sensors
   _sensor1Connected = initSensor(_sensor1, "Sensor 1 (Bus 0)");
@@ -40,13 +35,10 @@ bool SensorManager::initSensor(AS5600& sensor, const char* name) {
   sensor.begin();
   bool connected = sensor.isConnected();
   
-  #if DEBUG_ENABLED
-    Serial.printf("%s: %s\n", name, connected ? "CONNECTED" : "NOT FOUND");
-    if (connected) {
-      Serial.printf("  - Magnet detected: %s\n", 
-                    sensor.detectMagnet() ? "YES" : "NO");
-    }
-  #endif
+  LOG_INFOF("%s: %s", name, connected ? "CONNECTED" : "NOT FOUND");
+  if (connected) {
+    LOG_INFOF("  - Magnet detected: %s", sensor.detectMagnet() ? "YES" : "NO");
+  }
 
   return connected;
 }

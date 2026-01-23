@@ -1,5 +1,6 @@
 #include "web_server.h"
 #include "config.h"
+#include "logger.h"
 #include <ArduinoJson.h>
 
 // Static instance pointer
@@ -170,6 +171,71 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             animation: pulse 1s ease-in-out infinite;
         }
         
+        .logs-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .logs-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .log-entry {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            padding: 5px 10px;
+            margin: 3px 0;
+            border-radius: 3px;
+            background: white;
+            border-left: 3px solid #ccc;
+        }
+        
+        .log-entry.info {
+            border-left-color: #2196F3;
+        }
+        
+        .log-entry.warn {
+            border-left-color: #ff9800;
+            background: #fff8e1;
+        }
+        
+        .log-entry.error {
+            border-left-color: #f44336;
+            background: #ffebee;
+        }
+        
+        .log-timestamp {
+            color: #666;
+            margin-right: 10px;
+        }
+        
+        .log-level {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .log-level.info {
+            color: #2196F3;
+        }
+        
+        .log-level.warn {
+            color: #ff9800;
+        }
+        
+        .log-level.error {
+            color: #f44336;
+        }
+        
+        .log-message {
+            color: #333;
+        }
+        
         @media (max-width: 768px) {
             .container {
                 padding: 20px;
@@ -234,6 +300,13 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             <p>• Values are updated in real-time via WebSocket</p>
             <p>• Angle range: 0° - 360°</p>
         </div>
+        
+        <div class="logs-section">
+            <h3>📋 System Logs</h3>
+            <div id="logs-container">
+                <div class="log-entry">Loading logs...</div>
+            </div>
+        </div>
     </div>
     
     <script>
@@ -295,8 +368,45 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             setTimeout(() => angleElement.classList.remove('updating'), 300);
         }
         
+        // Load and display system logs
+        function loadLogs() {
+            fetch('/logs')
+                .then(response => response.json())
+                .then(logs => {
+                    const container = document.getElementById('logs-container');
+                    
+                    if (logs.length === 0) {
+                        container.innerHTML = '<div class="log-entry">No logs available</div>';
+                        return;
+                    }
+                    
+                    container.innerHTML = '';
+                    
+                    // Display logs in reverse order (newest first)
+                    logs.reverse().forEach(log => {
+                        const entry = document.createElement('div');
+                        const levelClass = log.level.trim().toLowerCase();
+                        entry.className = `log-entry ${levelClass}`;
+                        
+                        entry.innerHTML = `
+                            <span class="log-timestamp">${log.timestamp}</span>
+                            <span class="log-level ${levelClass}">[${log.level.trim()}]</span>
+                            <span class="log-message">${log.message}</span>
+                        `;
+                        
+                        container.appendChild(entry);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading logs:', error);
+                    document.getElementById('logs-container').innerHTML = 
+                        '<div class="log-entry error">Failed to load logs</div>';
+                });
+        }
+        
         // Connect on page load
         connectWebSocket();
+        loadLogs();
     </script>
 </body>
 </html>
@@ -316,51 +426,36 @@ WebServerManager::WebServerManager()
 bool WebServerManager::begin(const char* ssid, const char* password, uint16_t port) {
   // Check if WiFi should be enabled (SSID must be non-empty)
   if (ssid == nullptr || strlen(ssid) == 0) {
-    #if DEBUG_ENABLED
-      Serial.println("WiFi disabled (SSID not configured)");
-    #endif
+    LOG_INFO("WiFi disabled (SSID not configured)");
     wifiEnabled = false;
     return false;
   }
   
   serverPort = port;
   
-  #if DEBUG_ENABLED
-    Serial.println("\n=== WiFi Configuration ===");
-    Serial.print("SSID: ");
-    Serial.println(ssid);
-  #endif
+  LOG_INFO("=== WiFi Configuration ===");
+  LOG_INFOF("SSID: %s", ssid);
   
   // Connect to WiFi
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   
-  #if DEBUG_ENABLED
-    Serial.print("Connecting to WiFi");
-  #endif
+  LOG_INFO("Connecting to WiFi...");
   
   // Wait for connection (timeout after 20 seconds)
   unsigned long startAttempt = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - startAttempt < 20000) {
     delay(500);
-    #if DEBUG_ENABLED
-      Serial.print(".");
-    #endif
   }
   
   if (WiFi.status() != WL_CONNECTED) {
-    #if DEBUG_ENABLED
-      Serial.println("\nFailed to connect to WiFi");
-    #endif
+    LOG_ERROR("Failed to connect to WiFi");
     wifiEnabled = false;
     return false;
   }
   
-  #if DEBUG_ENABLED
-    Serial.println("\nWiFi connected!");
-    Serial.print("IP Address: ");
-    Serial.println(WiFi.localIP());
-  #endif
+  LOG_INFO("WiFi connected!");
+  LOG_INFOF("IP Address: %s", WiFi.localIP().toString().c_str());
   
   // Initialize web server
   server = new WebServer(serverPort);
@@ -370,16 +465,19 @@ bool WebServerManager::begin(const char* ssid, const char* password, uint16_t po
     instance->server->send_P(200, "text/html", INDEX_HTML);
   });
   
+  // Logs endpoint - returns stored log entries as JSON
+  server->on("/logs", []() {
+    String logsJSON = logger.getEntriesJSON();
+    instance->server->send(200, "application/json", logsJSON);
+  });
+  
   server->onNotFound([]() {
     instance->server->send(404, "text/plain", "404: Not Found");
   });
   
   server->begin();
   
-  #if DEBUG_ENABLED
-    Serial.print("Web server started on port ");
-    Serial.println(serverPort);
-  #endif
+  LOG_INFOF("Web server started on port %d", serverPort);
   
   // Initialize WebSocket server on port 81
   webSocket = new WebSocketsServer(81);
@@ -390,10 +488,8 @@ bool WebServerManager::begin(const char* ssid, const char* password, uint16_t po
     }
   });
   
-  #if DEBUG_ENABLED
-    Serial.println("WebSocket server started on port 81");
-    Serial.println("==========================\n");
-  #endif
+  LOG_INFO("WebSocket server started on port 81");
+  LOG_INFO("==========================");
   
   wifiEnabled = true;
   return true;
@@ -451,18 +547,14 @@ void WebServerManager::broadcastSensorData() {
 void WebServerManager::webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
   switch(type) {
     case WStype_DISCONNECTED:
-      #if DEBUG_ENABLED
-        Serial.printf("WebSocket [%u] disconnected\n", num);
-      #endif
+      LOG_DEBUGF("WebSocket [%u] disconnected", num);
       break;
       
     case WStype_CONNECTED:
       {
-        #if DEBUG_ENABLED
-          IPAddress ip = webSocket->remoteIP(num);
-          Serial.printf("WebSocket [%u] connected from %d.%d.%d.%d\n", 
-                       num, ip[0], ip[1], ip[2], ip[3]);
-        #endif
+        IPAddress ip = webSocket->remoteIP(num);
+        LOG_DEBUGF("WebSocket [%u] connected from %d.%d.%d.%d", 
+                   num, ip[0], ip[1], ip[2], ip[3]);
         
         // Send initial data to newly connected client
         StaticJsonDocument<128> doc;
@@ -478,9 +570,7 @@ void WebServerManager::webSocketEvent(uint8_t num, WStype_t type, uint8_t* paylo
       break;
       
     case WStype_TEXT:
-      #if DEBUG_ENABLED
-        Serial.printf("WebSocket [%u] received text: %s\n", num, payload);
-      #endif
+      LOG_DEBUGF("WebSocket [%u] received text: %s", num, payload);
       break;
       
     default:
